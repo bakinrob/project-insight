@@ -278,7 +278,7 @@ export function DealerRunProvider({ children }: { children: ReactNode }) {
         description: metadata.description,
         sourceUrl: page.url,
       },
-      brand,
+      brand: brand as unknown as Record<string, unknown>,
       structuredPage: structuredData as StructuredPageData,
       pageTypeHint: structuredPageType,
     });
