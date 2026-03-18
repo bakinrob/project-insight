@@ -120,7 +120,7 @@ const Index = () => {
               description: metadata.description,
               sourceUrl: page.url,
             },
-            brand,
+            brand: brand as unknown as Record<string, unknown>,
             pageTypeHint: page.pageType,
           });
 
@@ -147,7 +147,7 @@ const Index = () => {
               description: metadata.description,
               sourceUrl: page.url,
             },
-            brand,
+            brand: brand as unknown as Record<string, unknown>,
             structuredPage: structuredData as StructuredPageData,
             pageTypeHint: structuredPageType,
           });

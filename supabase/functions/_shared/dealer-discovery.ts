@@ -145,7 +145,7 @@ export function extractLinksFromMarkdown(markdown: string, rootUrl: string): Dis
         return null;
       }
     })
-    .filter((candidate): candidate is DiscoveryPageCandidate => Boolean(candidate));
+    .filter(Boolean) as DiscoveryPageCandidate[];
 }
 
 export function parseSitemapXml(xml: string): string[] {
