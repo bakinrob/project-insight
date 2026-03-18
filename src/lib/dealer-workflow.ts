@@ -84,3 +84,57 @@ export interface RunSummary {
   failedCount?: number;
   brandKey?: string;
 }
+
+export type PageStatus =
+  | "pending"
+  | "discovering"
+  | "discovered"
+  | "approved"
+  | "scraping"
+  | "scraped"
+  | "structuring"
+  | "structured"
+  | "generating"
+  | "done"
+  | "error";
+
+export interface PageJob {
+  url: string;
+  normalizedUrl?: string;
+  status: PageStatus;
+  scrapedContent?: string;
+  scrapedMeta?: { title?: string; description?: string };
+  pageType?: string;
+  structuredData?: Record<string, unknown>;
+  generatedCode?: string;
+  error?: string;
+}
+
+export interface DealerWorkspaceState {
+  jobs: PageJob[];
+  discovery: DiscoveryResult | null;
+  selectedDiscoveredUrls: string[];
+  activeBrandKey: string;
+  isProcessing: boolean;
+  activeRunId?: string | null;
+}
+
+export interface DealerRunListItem {
+  id: string;
+  mode: InputMode;
+  brand_key: string;
+  seed_url?: string | null;
+  site_domain?: string | null;
+  site_title?: string | null;
+  status: string;
+  approved_urls?: string[];
+  summary?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  counts: {
+    total: number;
+    completed: number;
+    failed: number;
+  };
+}

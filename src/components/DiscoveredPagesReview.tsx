@@ -1,20 +1,24 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import type { DiscoveredPage, DiscoveryResult } from "@/lib/dealer-workflow";
-import { CheckCheck, Filter, Play, Sparkles } from "lucide-react";
+import { CheckCheck, ChevronDown, Filter, Play, Sparkles } from "lucide-react";
 
 interface DiscoveredPagesReviewProps {
   discovery: DiscoveryResult;
   selectedUrls: string[];
   isProcessing: boolean;
+  recommendedSelectionApplied: boolean;
+  hasGeneratedPages?: boolean;
   onToggleUrl: (url: string) => void;
   onAcceptRecommended: () => void;
   onSelectStaticPages: () => void;
   onExcludeInventory: () => void;
   onStartGeneration: () => void;
+  onOpenWorkspace?: () => void;
 }
 
 const TYPE_TONE: Record<DiscoveredPage["pageType"], string> = {
@@ -52,103 +56,139 @@ export default function DiscoveredPagesReview({
   discovery,
   selectedUrls,
   isProcessing,
+  recommendedSelectionApplied,
+  hasGeneratedPages = false,
   onToggleUrl,
   onAcceptRecommended,
   onSelectStaticPages,
   onExcludeInventory,
   onStartGeneration,
+  onOpenWorkspace,
 }: DiscoveredPagesReviewProps) {
   const selectedSet = useMemo(() => new Set(selectedUrls), [selectedUrls]);
-  const selectedCount = selectedUrls.length;
+  const [expandedUrl, setExpandedUrl] = useState<string | null>(discovery.pages[0]?.normalizedUrl || null);
 
   return (
-    <div className="rounded-xl border border-border bg-card p-6 space-y-5">
+    <div className="rounded-2xl border border-border bg-card p-6 space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <h3 className="text-lg font-semibold text-foreground">Review Discovered Pages</h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-xl font-semibold text-foreground">Review Discovered Pages</h2>
             <Badge variant="secondary">{discovery.site.rootDomain}</Badge>
           </div>
           <p className="text-sm text-muted-foreground">
-            {discovery.summary.totalDiscovered} pages discovered,{" "}
-            {discovery.summary.recommendedCount} recommended. Review the sitemap before
-            scraping or generation starts.
+            {discovery.summary.totalDiscovered} pages discovered, {discovery.summary.recommendedCount} recommended.
+            Select the pages you want to turn into generated outputs.
           </p>
         </div>
 
-        <Button
-          onClick={onStartGeneration}
-          disabled={selectedCount === 0 || isProcessing}
-          className="min-w-[220px]"
-        >
-          <Play className="w-4 h-4" />
-          Generate {selectedCount} Approved Page{selectedCount !== 1 ? "s" : ""}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onOpenWorkspace}
+            disabled={!onOpenWorkspace || !hasGeneratedPages}
+          >
+            Open Generated Pages
+          </Button>
+          <Button
+            onClick={onStartGeneration}
+            disabled={selectedUrls.length === 0 || isProcessing}
+            className="min-w-[220px]"
+          >
+            <Play className="w-4 h-4" />
+            Generate {selectedUrls.length} Selected Page{selectedUrls.length !== 1 ? "s" : ""}
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" onClick={onAcceptRecommended} disabled={isProcessing}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onAcceptRecommended}
+          disabled={isProcessing || recommendedSelectionApplied}
+        >
           <CheckCheck className="w-4 h-4" />
-          Accept Recommended
+          {recommendedSelectionApplied ? "Recommended Applied" : "Accept Recommended"}
         </Button>
         <Button variant="outline" size="sm" onClick={onSelectStaticPages} disabled={isProcessing}>
           <Sparkles className="w-4 h-4" />
-          Select Static Pages
+          Static Only
         </Button>
         <Button variant="outline" size="sm" onClick={onExcludeInventory} disabled={isProcessing}>
           <Filter className="w-4 h-4" />
-          Exclude Inventory-Related
+          Exclude Inventory
         </Button>
       </div>
 
-      <ScrollArea className="h-[420px] rounded-lg border border-border">
+      <ScrollArea className="h-[560px] rounded-xl border border-border">
         <div className="divide-y divide-border">
           {discovery.pages.map((page) => {
             const checked = selectedSet.has(page.normalizedUrl);
+            const expanded = expandedUrl === page.normalizedUrl;
             const isStaticType = STATIC_TYPES.has(page.pageType);
 
             return (
-              <div key={page.normalizedUrl} className="p-4 space-y-3">
-                <div className="flex gap-3">
+              <div key={page.normalizedUrl} className="px-4 py-3">
+                <div className="flex items-start gap-3">
                   <Checkbox
                     checked={checked}
                     onCheckedChange={() => onToggleUrl(page.normalizedUrl)}
                     disabled={isProcessing}
                     className="mt-1"
                   />
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-medium text-foreground truncate">
-                        {page.title || page.h1 || page.normalizedUrl}
-                      </p>
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${TYPE_TONE[page.pageType]}`}
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="min-w-0 space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="max-w-full truncate font-medium text-foreground">
+                            {page.title || page.h1 || page.normalizedUrl}
+                          </p>
+                          <span
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${TYPE_TONE[page.pageType]}`}
+                          >
+                            {page.pageType.replace(/_/g, " ")}
+                          </span>
+                          {page.recommended ? <Badge variant="secondary">Recommended</Badge> : null}
+                          {isStaticType ? <Badge variant="outline">Static</Badge> : null}
+                        </div>
+                        <p className="font-mono text-[11px] text-muted-foreground break-all">
+                          {page.normalizedUrl}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+                          <span>Confidence {Math.round(page.confidence * 100)}%</span>
+                          <span>{page.reason}</span>
+                        </div>
+                      </div>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="shrink-0 text-xs"
+                        onClick={() => setExpandedUrl(expanded ? null : page.normalizedUrl)}
                       >
-                        {page.pageType.replace(/_/g, " ")}
-                      </span>
-                      {page.recommended && (
-                        <Badge variant="secondary">Recommended</Badge>
-                      )}
-                      {isStaticType && (
-                        <Badge variant="outline">Static</Badge>
-                      )}
+                        Details
+                        <ChevronDown className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
+                      </Button>
                     </div>
 
-                    <p className="font-mono text-xs text-muted-foreground break-all">
-                      {page.normalizedUrl}
-                    </p>
-
-                    {page.summary && (
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        {page.summary}
-                      </p>
-                    )}
-
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                      <span>Confidence: {Math.round(page.confidence * 100)}%</span>
-                      <span>Source: {page.source}</span>
-                      <span>{page.reason}</span>
-                    </div>
+                    <Collapsible open={expanded}>
+                      <CollapsibleContent className="pt-3">
+                        <div className="rounded-lg border border-border bg-secondary/20 px-3 py-3 text-sm text-muted-foreground">
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] uppercase tracking-wide">
+                            <span>Source: {page.source}</span>
+                            {page.anchorText ? <span>Anchor: {page.anchorText}</span> : null}
+                          </div>
+                          {page.summary ? (
+                            <p className="mt-2 leading-relaxed">{page.summary}</p>
+                          ) : (
+                            <p className="mt-2 text-xs">No summary extracted for this page.</p>
+                          )}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
                   </div>
                 </div>
               </div>

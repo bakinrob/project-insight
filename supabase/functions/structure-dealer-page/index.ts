@@ -73,6 +73,7 @@ serve(async (req) => {
           {
             role: "user",
             content: `Brand: ${brand?.name || "Unknown"}
+Brand profile: ${JSON.stringify(brand?.profile || {}, null, 2)}
 Page type hint: ${pageTypeHint || "unknown"}
 Source URL: ${metadata?.sourceUrl || ""}
 Original title: ${metadata?.title || ""}

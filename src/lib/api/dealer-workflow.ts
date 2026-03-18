@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type {
+  DealerRunListItem,
   DiscoveryResult,
   RunSummary,
   StructuredPageData,
@@ -19,6 +20,33 @@ export const dealerWorkflowApi = {
     }
 
     return data as DiscoveryResult;
+  },
+
+  async listRuns(limit = 20) {
+    const { data, error } = await supabase.functions.invoke("list-dealer-runs", {
+      body: { limit },
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return data as { runs: DealerRunListItem[] };
+  },
+
+  async getRun(runId: string) {
+    const { data, error } = await supabase.functions.invoke("list-dealer-runs", {
+      body: { runId },
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return data as {
+      run: Record<string, unknown>;
+      pages: Array<Record<string, unknown>>;
+    };
   },
 
   async createManualRun(urls: string[], brandKey: string, summary?: RunSummary) {

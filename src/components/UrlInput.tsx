@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { ChevronDown, Compass, Wrench, Zap } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,18 +11,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { brands, brandKeys } from "@/lib/brands";
 import type { InputMode } from "@/lib/dealer-workflow";
-import { Compass, Zap } from "lucide-react";
 
 interface UrlInputProps {
   onSubmit: (payload: { mode: InputMode; urls?: string[]; seedUrl?: string; brandKey: string }) => void;
   isProcessing: boolean;
 }
 
-const UrlInput = ({ onSubmit, isProcessing }: UrlInputProps) => {
-  const [mode, setMode] = useState<InputMode>("manual_urls");
+export default function UrlInput({ onSubmit, isProcessing }: UrlInputProps) {
+  const [isManualModeExpanded, setIsManualModeExpanded] = useState(false);
   const [urlText, setUrlText] = useState("");
   const [seedUrl, setSeedUrl] = useState("");
   const [selectedBrand, setSelectedBrand] = useState("");
@@ -33,6 +33,8 @@ const UrlInput = ({ onSubmit, isProcessing }: UrlInputProps) => {
         .filter((u) => u.length > 0),
     [urlText],
   );
+
+  const mode: InputMode = isManualModeExpanded ? "manual_urls" : "seed_discovery";
 
   const handleSubmit = () => {
     if (!selectedBrand) return;
@@ -54,45 +56,20 @@ const UrlInput = ({ onSubmit, isProcessing }: UrlInputProps) => {
 
   return (
     <div className="space-y-5">
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-muted-foreground block">
-          Input Mode
-        </label>
-        <Tabs
-          value={mode}
-          onValueChange={(value) => setMode(value as InputMode)}
-          className="w-full"
-        >
-          <TabsList className="grid grid-cols-2 w-full">
-            <TabsTrigger value="manual_urls">Manual URLs</TabsTrigger>
-            <TabsTrigger value="seed_discovery">Seed Discovery</TabsTrigger>
-          </TabsList>
-        </Tabs>
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          Manual mode is the safest demo path. Seed discovery starts from one homepage URL,
-          finds likely migration pages, and pauses for review before scraping.
-        </p>
-      </div>
-
-      {mode === "manual_urls" ? (
-        <div>
-          <label className="text-sm font-medium text-muted-foreground mb-2 block">
-            Paste dealership URLs (one per line)
-          </label>
-          <Textarea
-            value={urlText}
-            onChange={(e) => setUrlText(e.target.value)}
-            placeholder={"https://dealer-website.com/about\nhttps://dealer-website.com/service\nhttps://dealer-website.com/inventory"}
-            className="min-h-[160px] bg-background border-border font-mono text-sm resize-none"
-            disabled={isProcessing}
-          />
-          {urls.length > 0 && (
-            <p className="text-xs text-muted-foreground mt-1.5">
-              {urls.length} URL{urls.length !== 1 ? "s" : ""} detected
+      <div className="rounded-lg border border-border bg-secondary/20 p-4 space-y-4">
+        <div className="flex items-start gap-3">
+          <div className="mt-0.5 rounded-lg bg-primary/10 p-2">
+            <Compass className="h-4 w-4 text-primary" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground">Seed Discovery</p>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              Start from one homepage URL. DealerForge will discover likely migration pages,
+              exclude junk, and pause for review before generation.
             </p>
-          )}
+          </div>
         </div>
-      ) : (
+
         <div className="space-y-2">
           <label className="text-sm font-medium text-muted-foreground block">
             Dealership Homepage URL
@@ -102,14 +79,10 @@ const UrlInput = ({ onSubmit, isProcessing }: UrlInputProps) => {
             onChange={(e) => setSeedUrl(e.target.value)}
             placeholder="https://www.examplemotors.com"
             className="bg-background border-border font-mono text-sm"
-            disabled={isProcessing}
+            disabled={isProcessing || isManualModeExpanded}
           />
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            DealerForge will crawl the same domain, infer page types, exclude junk pages,
-            and generate a reviewable sitemap before any AI generation starts.
-          </p>
         </div>
-      )}
+      </div>
 
       <div>
         <label className="text-sm font-medium text-muted-foreground mb-2 block">
@@ -128,9 +101,7 @@ const UrlInput = ({ onSubmit, isProcessing }: UrlInputProps) => {
                     style={{ backgroundColor: brands[key].primary }}
                   />
                   {brands[key].name}
-                  <span className="text-muted-foreground text-xs ml-1">
-                    ({brands[key].tier})
-                  </span>
+                  <span className="text-muted-foreground text-xs ml-1">({brands[key].tier})</span>
                 </span>
               </SelectItem>
             ))}
@@ -138,23 +109,68 @@ const UrlInput = ({ onSubmit, isProcessing }: UrlInputProps) => {
         </Select>
       </div>
 
+      <Collapsible open={isManualModeExpanded} onOpenChange={setIsManualModeExpanded}>
+        <div className="rounded-lg border border-border bg-secondary/10">
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="flex w-full items-center justify-between px-4 py-3 text-left"
+              disabled={isProcessing}
+            >
+              <div className="flex items-center gap-3">
+                <div className="rounded-md bg-secondary p-2">
+                  <Wrench className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">Advanced: Manual URLs</p>
+                  <p className="text-xs text-muted-foreground">
+                    Use this fallback if discovery misses pages or you want total control.
+                  </p>
+                </div>
+              </div>
+              <ChevronDown
+                className={`h-4 w-4 text-muted-foreground transition-transform ${isManualModeExpanded ? "rotate-180" : ""}`}
+              />
+            </button>
+          </CollapsibleTrigger>
+
+          <CollapsibleContent className="border-t border-border px-4 pb-4 pt-3">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground block">
+                Paste dealership URLs (one per line)
+              </label>
+              <Textarea
+                value={urlText}
+                onChange={(e) => setUrlText(e.target.value)}
+                placeholder={"https://dealer-website.com/about\nhttps://dealer-website.com/service\nhttps://dealer-website.com/contact"}
+                className="min-h-[132px] bg-background border-border font-mono text-sm resize-none"
+                disabled={isProcessing}
+              />
+              {urls.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {urls.length} URL{urls.length !== 1 ? "s" : ""} detected
+                </p>
+              )}
+            </div>
+          </CollapsibleContent>
+        </div>
+      </Collapsible>
+
       <Button
         onClick={handleSubmit}
         disabled={submitDisabled}
-        className="w-full h-12 text-base font-semibold"
+        className="w-full h-11 text-sm font-semibold"
         size="lg"
       >
-        {mode === "manual_urls" ? <Zap className="w-5 h-5" /> : <Compass className="w-5 h-5" />}
+        {mode === "manual_urls" ? <Zap className="w-4 h-4" /> : <Compass className="w-4 h-4" />}
         {mode === "manual_urls"
           ? isProcessing
-            ? "Processing..."
-            : `Generate ${urls.length} Page${urls.length !== 1 ? "s" : ""}`
+            ? "Processing Manual URLs..."
+            : `Generate ${urls.length} Manual Page${urls.length !== 1 ? "s" : ""}`
           : isProcessing
             ? "Discovering..."
             : "Discover Migration Pages"}
       </Button>
     </div>
   );
-};
-
-export default UrlInput;
+}

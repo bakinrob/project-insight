@@ -19,6 +19,7 @@ Design rules:
 - Every page needs a clear CTA above the fold.
 - Service/contact/about/financing pages should not be rendered like inventory pages.
 - Use inline CSS variables for brand colors when helpful.
+- Follow OEM guidance when provided, while improving clarity and polish.
 `;
 
 function buildUserPrompt(input: {
@@ -51,7 +52,9 @@ Output requirements:
 - Preserve H1/H2 meaning and SEO intent.
 - Reuse original image URLs.
 - Use a dealership-grade layout, not a generic SaaS layout.
-- If the page is not inventory-focused, avoid inventory-card-heavy composition.`;
+- If the page is not inventory-focused, avoid inventory-card-heavy composition.
+- Use the OEM profile inside the brand configuration as guidance for tone, design direction, priorities, and avoid/improve rules.
+- Improve the source page rather than copying its weaknesses.`;
 }
 
 serve(async (req) => {

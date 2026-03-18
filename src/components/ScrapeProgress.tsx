@@ -1,91 +1,113 @@
 import type { ReactNode } from "react";
-import { CheckCircle2, Loader2, AlertCircle, Globe, Cpu, Compass, ListChecks } from "lucide-react";
-
-export type PageStatus =
-  | "pending"
-  | "discovering"
-  | "discovered"
-  | "approved"
-  | "scraping"
-  | "scraped"
-  | "structuring"
-  | "structured"
-  | "generating"
-  | "done"
-  | "error";
-
-export interface PageJob {
-  url: string;
-  normalizedUrl?: string;
-  status: PageStatus;
-  scrapedContent?: string;
-  scrapedMeta?: { title?: string; description?: string };
-  pageType?: string;
-  structuredData?: Record<string, unknown>;
-  generatedCode?: string;
-  error?: string;
-}
+import { ArrowUpRight, CheckCircle2, AlertCircle, Globe, Cpu, Compass, ListChecks, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import type { PageJob, PageStatus } from "@/lib/dealer-workflow";
 
 interface ScrapeProgressProps {
   jobs: PageJob[];
+  onOpenWorkspace?: () => void;
+  hasGeneratedPages?: boolean;
 }
 
 const statusConfig: Record<PageStatus, { icon: ReactNode; label: string; color: string }> = {
   pending: { icon: <Globe className="w-4 h-4" />, label: "Queued", color: "text-muted-foreground" },
-  discovering: { icon: <Compass className="w-4 h-4 animate-pulse" />, label: "Discovering…", color: "text-primary" },
+  discovering: { icon: <Compass className="w-4 h-4 animate-pulse" />, label: "Discovering", color: "text-primary" },
   discovered: { icon: <CheckCircle2 className="w-4 h-4" />, label: "Discovered", color: "text-primary" },
   approved: { icon: <ListChecks className="w-4 h-4" />, label: "Approved", color: "text-primary" },
-  scraping: { icon: <Loader2 className="w-4 h-4 animate-spin" />, label: "Scraping…", color: "text-primary" },
+  scraping: { icon: <Globe className="w-4 h-4 animate-pulse" />, label: "Scraping", color: "text-primary" },
   scraped: { icon: <CheckCircle2 className="w-4 h-4" />, label: "Scraped", color: "text-primary" },
-  structuring: { icon: <Cpu className="w-4 h-4 animate-pulse" />, label: "Structuring…", color: "text-primary" },
+  structuring: { icon: <Cpu className="w-4 h-4 animate-pulse" />, label: "Structuring", color: "text-primary" },
   structured: { icon: <CheckCircle2 className="w-4 h-4" />, label: "Structured", color: "text-primary" },
-  generating: { icon: <Cpu className="w-4 h-4 animate-pulse" />, label: "Generating…", color: "text-primary" },
+  generating: { icon: <Sparkles className="w-4 h-4 animate-pulse" />, label: "Generating", color: "text-primary" },
   done: { icon: <CheckCircle2 className="w-4 h-4" />, label: "Complete", color: "text-primary" },
   error: { icon: <AlertCircle className="w-4 h-4" />, label: "Failed", color: "text-destructive" },
 };
 
-const ScrapeProgress = ({ jobs }: ScrapeProgressProps) => {
+export default function ScrapeProgress({
+  jobs,
+  onOpenWorkspace,
+  hasGeneratedPages = false,
+}: ScrapeProgressProps) {
   if (jobs.length === 0) return null;
 
-  const completed = jobs.filter((j) => j.status === "done").length;
+  const completed = jobs.filter((job) => job.status === "done").length;
+  const failed = jobs.filter((job) => job.status === "error").length;
   const total = jobs.length;
-  const pct = Math.round((completed / total) * 100);
+  const pct = total === 0 ? 0 : Math.round(((completed + failed) / total) * 100);
+  const activeJob = jobs.find((job) =>
+    ["discovering", "scraping", "structuring", "generating"].includes(job.status),
+  );
+  const latestJobs = jobs.slice(0, 3);
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">Progress</span>
-        <span className="font-mono text-foreground">
-          {completed}/{total} — {pct}%
-        </span>
+    <div className="space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium text-foreground">Run Status</p>
+          <p className="text-xs text-muted-foreground">
+            {completed} complete, {failed} failed, {total - completed - failed} remaining
+          </p>
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onOpenWorkspace}
+          disabled={!onOpenWorkspace || (!hasGeneratedPages && !activeJob)}
+        >
+          <ArrowUpRight className="w-4 h-4" />
+          Open Generated Pages
+        </Button>
       </div>
 
-      <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+      <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
         <div
-          className="h-full bg-primary rounded-full transition-[width] duration-300 ease-out"
+          className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
           style={{ width: `${pct}%` }}
         />
       </div>
 
-      <div className="space-y-1.5 max-h-[240px] overflow-y-auto">
-        {jobs.map((job) => {
+      <div className="grid grid-cols-3 gap-2">
+        <div className="rounded-lg border border-border bg-secondary/40 px-3 py-2">
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Progress</p>
+          <p className="text-lg font-semibold text-foreground">{pct}%</p>
+        </div>
+        <div className="rounded-lg border border-border bg-secondary/40 px-3 py-2">
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Generated</p>
+          <p className="text-lg font-semibold text-foreground">{completed}</p>
+        </div>
+        <div className="rounded-lg border border-border bg-secondary/40 px-3 py-2">
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Failed</p>
+          <p className="text-lg font-semibold text-foreground">{failed}</p>
+        </div>
+      </div>
+
+      {activeJob ? (
+        <div className="rounded-lg border border-border bg-secondary/30 px-3 py-3">
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Current Task</p>
+          <p className="mt-1 truncate text-sm font-medium text-foreground">{activeJob.url}</p>
+          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+            <span className={statusConfig[activeJob.status].color}>{statusConfig[activeJob.status].icon}</span>
+            <span>{statusConfig[activeJob.status].label}</span>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="space-y-2">
+        {latestJobs.map((job) => {
           const cfg = statusConfig[job.status];
           return (
             <div
               key={job.url}
-              className="flex items-center gap-3 px-3 py-2 rounded-md bg-secondary/50 text-sm"
+              className="flex items-center gap-2 rounded-lg border border-border bg-secondary/20 px-3 py-2"
             >
               <span className={cfg.color}>{cfg.icon}</span>
-              <span className="truncate flex-1 font-mono text-xs text-foreground">
-                {job.url}
-              </span>
-              <span className={`text-xs font-medium ${cfg.color}`}>{cfg.label}</span>
+              <span className="min-w-0 flex-1 truncate text-xs text-foreground">{job.url}</span>
+              <span className={`text-[11px] font-medium ${cfg.color}`}>{cfg.label}</span>
             </div>
           );
         })}
       </div>
     </div>
   );
-};
-
-export default ScrapeProgress;
+}
