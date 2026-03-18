@@ -161,7 +161,7 @@ export default function Index() {
               />
             ) : (
               <div className="flex min-h-[620px] items-center justify-center rounded-2xl border border-dashed border-border bg-card/50 p-10">
-                <div className="max-w-lg space-y-4 text-center">
+                <div className="max-w-lg text-center space-y-4">
                   <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
                     <Sparkles className="h-6 w-6 text-primary" />
                   </div>
@@ -169,7 +169,7 @@ export default function Index() {
                     <h2 className="text-2xl font-semibold text-foreground">A cleaner migration flow</h2>
                     <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                       Discovery and review stay here. Generated pages move into a dedicated
-                      workspace where they&apos;re easier to browse, preview, and inspect.
+                      workspace where they’re easier to browse, preview, and inspect.
                     </p>
                   </div>
                   <div className="flex flex-wrap justify-center gap-2">

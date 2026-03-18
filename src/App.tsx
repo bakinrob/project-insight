@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { DealerRunProvider } from "@/context/DealerRunContext";
 import Index from "./pages/Index.tsx";
+import GeneratedPageRoute from "./pages/GeneratedPageRoute.tsx";
 import GeneratedWorkspace from "./pages/GeneratedWorkspace.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -20,6 +21,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/generated" element={<GeneratedWorkspace />} />
+            <Route path="/runs/:runId/generated/:pageKey" element={<GeneratedPageRoute />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -11,6 +11,8 @@ const SYSTEM_PROMPT = `You are an expert React/Tailwind CSS developer specializi
 Design rules:
 - Use semantic HTML5 only.
 - Return only raw HTML body markup. No markdown fences.
+- Output a single root <main> or <div> wrapper that includes data-brand and data-page-type attributes.
+- The root wrapper must define inline CSS variables for --brand-primary, --brand-secondary, --brand-accent, --surface, and --text-primary.
 - Adapt layout to page type.
 - Preserve the original SEO hierarchy and meaning.
 - Use the real images/content supplied.
@@ -23,22 +25,34 @@ Design rules:
 `;
 
 function buildUserPrompt(input: {
-  brand: Record<string, string>;
+  brand: Record<string, unknown>;
   metadata?: Record<string, string>;
   structuredPage?: Record<string, unknown>;
   scrapedContent?: string;
   pageTypeHint?: string;
 }) {
+  const pageType = input.pageTypeHint || String(input.structuredPage?.pageType || "unknown");
+  const oemPack = (input.brand?.oemPack as Record<string, unknown> | undefined) || {};
+  const pageSchemas =
+    (oemPack.pageSchemas as Record<string, unknown> | undefined) || {};
+  const pageSchema = pageSchemas[pageType] || null;
+
   return `Generate a premium dealership page.
 
 Brand configuration:
 ${JSON.stringify(input.brand, null, 2)}
 
+OEM pack:
+${JSON.stringify(oemPack, null, 2)}
+
 Metadata:
 ${JSON.stringify(input.metadata || {}, null, 2)}
 
 Page type hint:
-${input.pageTypeHint || input.structuredPage?.pageType || "unknown"}
+${pageType}
+
+Page schema:
+${JSON.stringify(pageSchema, null, 2)}
 
 Structured page data:
 ${JSON.stringify(input.structuredPage || {}, null, 2)}
@@ -48,12 +62,15 @@ ${input.scrapedContent || ""}
 
 Output requirements:
 - Return only raw HTML markup with Tailwind classes.
+- Use one root wrapper with data-brand="${String(input.brand?.name || "unknown").toLowerCase()}" and data-page-type="${pageType}".
+- Define inline CSS variables on the root wrapper using the OEM token system or brand colors.
 - Keep the page specific to the detected page type.
 - Preserve H1/H2 meaning and SEO intent.
 - Reuse original image URLs.
 - Use a dealership-grade layout, not a generic SaaS layout.
 - If the page is not inventory-focused, avoid inventory-card-heavy composition.
 - Use the OEM profile inside the brand configuration as guidance for tone, design direction, priorities, and avoid/improve rules.
+- Follow the provided OEM pack and page schema strictly, especially for Toyota.
 - Improve the source page rather than copying its weaknesses.`;
 }
 

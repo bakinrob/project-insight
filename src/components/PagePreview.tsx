@@ -7,27 +7,20 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { PageJob } from "@/lib/dealer-workflow";
+import {
+  buildPreviewDocument,
+  getJobPageIdentity,
+  getJobPageKey,
+  getJobTitle,
+} from "@/lib/generated-pages";
 import { toast } from "sonner";
 
 interface PagePreviewProps {
   jobs: PageJob[];
+  activeRunId?: string | null;
 }
 
-function buildPreviewDocument(code: string) {
-  return `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="https://cdn.tailwindcss.com"><\/script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>body{font-family:'Inter',sans-serif;margin:0}</style>
-</head>
-<body>${code}</body>
-</html>`;
-}
-
-export default function PagePreview({ jobs }: PagePreviewProps) {
+export default function PagePreview({ jobs, activeRunId }: PagePreviewProps) {
   const [copied, setCopied] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -37,18 +30,15 @@ export default function PagePreview({ jobs }: PagePreviewProps) {
   );
 
   const selectedKey = searchParams.get("page");
-  const current = useMemo(() => {
-    return (
-      completedJobs.find((job) => (job.normalizedUrl || job.url) === selectedKey) ||
-      completedJobs[0] ||
-      null
-    );
-  }, [completedJobs, selectedKey]);
+  const current = useMemo(
+    () => completedJobs.find((job) => getJobPageKey(job) === selectedKey) || completedJobs[0] || null,
+    [completedJobs, selectedKey],
+  );
 
   useEffect(() => {
     if (!current) return;
 
-    const currentKey = current.normalizedUrl || current.url;
+    const currentKey = getJobPageKey(current);
     if (selectedKey !== currentKey) {
       const next = new URLSearchParams(searchParams);
       next.set("page", currentKey);
@@ -82,15 +72,13 @@ export default function PagePreview({ jobs }: PagePreviewProps) {
   };
 
   const handleOpenStandalone = () => {
-    if (!current.generatedCode) return;
-    const previewWindow = window.open("", "_blank", "noopener,noreferrer");
-    if (!previewWindow) {
-      toast.error("Popup blocked. Allow popups to open the standalone preview.");
+    if (!activeRunId) {
+      toast.error("Open a saved run before using the standalone preview.");
       return;
     }
 
-    previewWindow.document.write(buildPreviewDocument(current.generatedCode));
-    previewWindow.document.close();
+    const route = `/runs/${activeRunId}/generated/${getJobPageKey(current)}?view=preview`;
+    window.open(route, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -109,7 +97,7 @@ export default function PagePreview({ jobs }: PagePreviewProps) {
             </div>
             <h1 className="text-xl font-semibold text-foreground">Generated Pages</h1>
             <p className="text-sm text-muted-foreground">
-              Browse previews, inspect structured data, and copy generated code.
+              Browse previews, inspect structured data, and open any generated page on its own route.
             </p>
           </div>
 
@@ -120,7 +108,7 @@ export default function PagePreview({ jobs }: PagePreviewProps) {
             </Button>
             <Button variant="outline" size="sm" onClick={handleOpenStandalone}>
               <ExternalLink className="w-4 h-4" />
-              Open Preview
+              Open Full Page
             </Button>
           </div>
         </div>
@@ -138,8 +126,8 @@ export default function PagePreview({ jobs }: PagePreviewProps) {
           <ScrollArea className="h-[calc(100vh-220px)] min-h-[420px]">
             <div className="space-y-1 p-2">
               {completedJobs.map((job) => {
-                const jobKey = job.normalizedUrl || job.url;
-                const isActive = (current.normalizedUrl || current.url) === jobKey;
+                const jobKey = getJobPageKey(job);
+                const isActive = getJobPageIdentity(current) === getJobPageIdentity(job);
                 return (
                   <button
                     key={jobKey}
@@ -156,12 +144,8 @@ export default function PagePreview({ jobs }: PagePreviewProps) {
                         : "border-transparent bg-secondary/20 hover:border-border hover:bg-secondary/40",
                     )}
                   >
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {job.scrapedMeta?.title || new URL(job.url).pathname || "Generated Page"}
-                    </p>
-                    <p className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
-                      {job.url}
-                    </p>
+                    <p className="truncate text-sm font-medium text-foreground">{getJobTitle(job)}</p>
+                    <p className="mt-1 truncate font-mono text-[11px] text-muted-foreground">{job.url}</p>
                     {job.pageType ? (
                       <Badge variant="outline" className="mt-2 text-[10px]">
                         {job.pageType.replace(/_/g, " ")}
@@ -177,10 +161,8 @@ export default function PagePreview({ jobs }: PagePreviewProps) {
         <section className="rounded-2xl border border-border bg-card p-5">
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div className="space-y-1">
-              <h2 className="text-lg font-semibold text-foreground">
-                {current.scrapedMeta?.title || current.url}
-              </h2>
-              <p className="font-mono text-xs text-muted-foreground break-all">{current.url}</p>
+              <h2 className="text-lg font-semibold text-foreground">{getJobTitle(current)}</h2>
+              <p className="break-all font-mono text-xs text-muted-foreground">{current.url}</p>
             </div>
             {current.pageType ? (
               <Badge variant="secondary">{current.pageType.replace(/_/g, " ")}</Badge>
@@ -203,7 +185,7 @@ export default function PagePreview({ jobs }: PagePreviewProps) {
             <TabsContent value="preview" className="mt-4">
               <div className="overflow-hidden rounded-xl border border-border bg-white">
                 <iframe
-                  srcDoc={buildPreviewDocument(current.generatedCode || "")}
+                  srcDoc={buildPreviewDocument(current.generatedCode || "", { title: getJobTitle(current) })}
                   className="h-[calc(100vh-260px)] min-h-[720px] w-full"
                   title="Page Preview"
                   sandbox="allow-scripts"

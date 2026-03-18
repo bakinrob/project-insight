@@ -1,3 +1,5 @@
+import type { DiscoveryPageType } from "@/lib/dealer-workflow";
+
 export type BrandTier = "luxury" | "mainstream";
 
 export interface BrandProfile {
@@ -8,6 +10,39 @@ export interface BrandProfile {
   financePagePriorities: string[];
   avoid: string[];
   improve: string[];
+}
+
+export interface OemTokens {
+  bgPrimary: string;
+  bgSurface: string;
+  textPrimary: string;
+  textSecondary: string;
+  brandPrimary: string;
+  brandAccent: string;
+  borderSubtle: string;
+  trust: string;
+}
+
+export interface OemPageSchema {
+  pageType: Extract<DiscoveryPageType, "homepage" | "service" | "specials" | "financing" | "contact" | "about">;
+  sectionOrder: string[];
+  primaryCtas: string[];
+  requiredKeywords: string[];
+  requiredElements: string[];
+  compositionNotes: string[];
+  avoid: string[];
+}
+
+export interface OemPack {
+  name: string;
+  tokens: OemTokens;
+  voice: string[];
+  globalRules: string[];
+  mobileRules: string[];
+  antiPatterns: string[];
+  improvementRules: string[];
+  pageSchemas: Partial<Record<DiscoveryPageType, OemPageSchema>>;
+  verificationRules: string[];
 }
 
 export interface BrandConfig {
@@ -24,9 +59,263 @@ export interface BrandConfig {
   borderRadius: string;
   logoUrl?: string;
   profile: BrandProfile;
+  oemPack: OemPack;
 }
 
-export const brands: Record<string, BrandConfig> = {
+const sharedAutomotiveRules = [
+  "Preserve dealership-native navigation and retail flow.",
+  "Keep new inventory, used inventory, service, specials, and financing easy to reach.",
+  "Place the strongest CTA above the fold and repeat it near trust content.",
+  "Keep content blocks scannable and dealer-platform-friendly instead of editorial.",
+  "Use real dealership content and imagery; never invent model claims.",
+];
+
+const sharedMobileRules = [
+  "Prioritize tap targets and a sticky action path for call, schedule, or pricing.",
+  "Collapse dense content into clean stacked cards and utility rows on mobile.",
+  "Avoid horizontal overflow, wide promo banners, and complex side-by-side text blocks on small screens.",
+];
+
+function createDefaultPageSchema(
+  pageType: OemPageSchema["pageType"],
+  sectionOrder: string[],
+  primaryCtas: string[],
+  requiredKeywords: string[],
+  compositionNotes: string[],
+): OemPageSchema {
+  return {
+    pageType,
+    sectionOrder,
+    primaryCtas,
+    requiredKeywords,
+    requiredElements: ["Visible CTA above the fold", "Trust signal within one scroll", "Structured supporting section"],
+    compositionNotes,
+    avoid: [
+      "Do not use generic SaaS hero composition.",
+      "Do not hide the main action inside oversized decorative blocks.",
+      "Do not drift into luxury/editorial pacing for mainstream OEMs.",
+    ],
+  };
+}
+
+function createDefaultOemPack(config: Omit<BrandConfig, "oemPack">, overrides?: Partial<OemPack>): OemPack {
+  const defaultSchemas: Partial<Record<DiscoveryPageType, OemPageSchema>> = {
+    homepage: createDefaultPageSchema(
+      "homepage",
+      ["hero", "quick-actions", "inventory-paths", "trust", "service-cta"],
+      [config.ctaText, "Schedule Service"],
+      ["inventory", "service", "specials"],
+      [
+        "Lead with a dealership-native hero and strong utility paths.",
+        "Use quick actions before deeper brand-story content.",
+      ],
+    ),
+    service: createDefaultPageSchema(
+      "service",
+      ["utility-intro", "service-menu", "value-props", "hours-contact", "booking-cta"],
+      ["Schedule Service", "Contact Service"],
+      ["service", "maintenance", "appointment"],
+      [
+        "Feature an appointment CTA immediately.",
+        "Keep service offers and amenities visible without looking like inventory cards.",
+      ],
+    ),
+    specials: createDefaultPageSchema(
+      "specials",
+      ["breadcrumb", "offer-stack", "service-cta", "trust-help", "bottom-cta"],
+      ["View Offers", "Schedule Service"],
+      ["special", "offer", "coupon"],
+      [
+        "Offer cards should be retail-clear and not feel like pricing tables.",
+        "Keep a service-retention CTA visible above the fold.",
+      ],
+    ),
+    financing: createDefaultPageSchema(
+      "financing",
+      ["confidence-intro", "finance-options", "trade-in-support", "lead-form", "faq"],
+      ["Apply for Financing", "Value Your Trade"],
+      ["finance", "payment", "credit"],
+      [
+        "Emphasize finance confidence and support over generic contact copy.",
+        "Keep trade-in and payment pathways adjacent to finance CTAs.",
+      ],
+    ),
+    contact: createDefaultPageSchema(
+      "contact",
+      ["contact-hero", "hours-directions", "team-help", "contact-cta"],
+      ["Get Directions", "Contact Us"],
+      ["contact", "hours", "directions"],
+      [
+        "Contact pages should prioritize location, hours, and immediate dealership help.",
+      ],
+    ),
+    about: createDefaultPageSchema(
+      "about",
+      ["story", "dealer-differentiators", "team-trust", "cta"],
+      ["Contact Us", config.ctaText],
+      ["about", "dealership", "team"],
+      [
+        "About pages should still feel like dealership pages, not agency storytelling pages.",
+      ],
+    ),
+  };
+
+  return {
+    name: `${config.name} OEM Pack`,
+    tokens: {
+      bgPrimary: "#f7f7f8",
+      bgSurface: "#ffffff",
+      textPrimary: config.secondary,
+      textSecondary: "#4b5563",
+      brandPrimary: config.primary,
+      brandAccent: config.accent,
+      borderSubtle: "rgba(17, 24, 39, 0.08)",
+      trust: "#0f9d58",
+    },
+    voice: [
+      config.profile.tone,
+      config.profile.designDirection,
+    ],
+    globalRules: sharedAutomotiveRules,
+    mobileRules: sharedMobileRules,
+    antiPatterns: [
+      ...config.profile.avoid,
+      "Do not generate a generic landing page that could belong to any industry.",
+      "Do not let merchandising or CTA styling drift away from dealership expectations.",
+    ],
+    improvementRules: config.profile.improve,
+    pageSchemas: defaultSchemas,
+    verificationRules: [
+      "Must include a clear H1 and an above-the-fold CTA.",
+      "Must feel like a dealership page for the detected page type.",
+      "Must use OEM color tokens and avoid generic SaaS or luxury drift.",
+    ],
+    ...overrides,
+  };
+}
+
+const toyotaOemPack: OemPack = {
+  name: "Toyota OEM Pack",
+  tokens: {
+    bgPrimary: "#f6f6f7",
+    bgSurface: "#ffffff",
+    textPrimary: "#111827",
+    textSecondary: "#4b5563",
+    brandPrimary: "#EB0A1E",
+    brandAccent: "#EB0A1E",
+    borderSubtle: "rgba(17, 24, 39, 0.08)",
+    trust: "#0f9d58",
+  },
+  voice: [
+    "Dependable, practical, efficient, broad-market, offer-aware.",
+    "Toyota pages should feel like high-volume retail dealership pages, not luxury editorials.",
+  ],
+  globalRules: [
+    ...sharedAutomotiveRules,
+    "Use a Toyota dealership header/navigation pattern with high-clarity inventory and service pathways.",
+    "Use Toyota red decisively for primary CTA moments, not as constant decoration.",
+    "Favor clean white/light surfaces with dark text and retail-strong content blocks.",
+    "Keep specials, service, and finance content conversion-oriented and operationally clear.",
+  ],
+  mobileRules: [
+    ...sharedMobileRules,
+    "Ensure the main CTA and quick actions remain visible early on mobile Toyota pages.",
+    "Use compact dealership-friendly stacking rather than wide editorial spacing on small screens.",
+  ],
+  antiPatterns: [
+    "No gradient-blob hero layouts.",
+    "No generic SaaS dashboards, glassmorphism, or product-marketing metaphors.",
+    "No luxury/editorial drift with oversized whitespace and weak action placement.",
+    "No hiding service specials or finance actions behind abstract content blocks.",
+    "No generic AI page sections that ignore dealership utility paths.",
+  ],
+  improvementRules: [
+    "Use cleaner spacing and stronger section rhythm than the source page.",
+    "Strengthen CTA hierarchy without losing Toyota dealership familiarity.",
+    "Keep trust, reviews, hours, and service ownership messaging close to decision points.",
+    "Improve mobile scannability and card structure while preserving Toyota retail clarity.",
+  ],
+  pageSchemas: {
+    homepage: {
+      pageType: "homepage",
+      sectionOrder: ["hero", "quick-actions", "inventory-paths", "specials-strip", "why-choose-us", "reviews", "service-retention-cta"],
+      primaryCtas: ["Check Availability", "Schedule Service"],
+      requiredKeywords: ["inventory", "service", "specials", "reviews"],
+      requiredElements: ["Hero with dealership CTA", "Quick action tiles", "Trust/review section"],
+      compositionNotes: [
+        "Use a dealership-native hero with inventory, service, and specials pathways visible early.",
+        "Below the hero, prioritize actionable dealership utilities before brand-story content.",
+      ],
+      avoid: ["Do not use a SaaS split hero.", "Do not bury service or specials below decorative sections."],
+    },
+    service: {
+      pageType: "service",
+      sectionOrder: ["utility-intro", "appointment-cta", "service-menu", "why-service-here", "amenities-hours", "booking-strip"],
+      primaryCtas: ["Schedule Service", "Contact Service"],
+      requiredKeywords: ["service", "maintenance", "appointment", "hours"],
+      requiredElements: ["Immediate service CTA", "Service menu or offer stack", "Hours/contact support"],
+      compositionNotes: [
+        "Service pages should feel operational, trustworthy, and easy to book from.",
+        "Keep amenities and contact information near the booking path.",
+      ],
+      avoid: ["Do not render service content as inventory cards.", "Do not over-style the page like a luxury brochure."],
+    },
+    specials: {
+      pageType: "specials",
+      sectionOrder: ["breadcrumb", "offer-intro", "offer-stack", "service-cta", "questions-help", "ownership-support", "bottom-cta"],
+      primaryCtas: ["Avail Your Offer", "Schedule Service"],
+      requiredKeywords: ["special", "offer", "coupon", "service"],
+      requiredElements: ["Strong H1", "Offer stack or promo card", "Visible service CTA"],
+      compositionNotes: [
+        "Offer presentation should be bold, retail-clear, and immediately actionable.",
+        "Pair every specials layout with a visible service-retention CTA.",
+      ],
+      avoid: ["Do not make specials pages look like generic announcement pages.", "Do not omit service or dealership-help context."],
+    },
+    financing: {
+      pageType: "financing",
+      sectionOrder: ["confidence-intro", "finance-options", "trade-in-support", "lead-form", "faq-trust"],
+      primaryCtas: ["Apply for Financing", "Value Your Trade"],
+      requiredKeywords: ["finance", "payment", "credit", "trade"],
+      requiredElements: ["Finance CTA", "Payment or trade-in support section", "Trust/FAQ block"],
+      compositionNotes: [
+        "Finance pages should emphasize confidence, payment guidance, and trade-in support.",
+        "Keep finance assistance and lead capture adjacent, not far apart.",
+      ],
+      avoid: ["Do not reuse contact-page layouts for finance pages.", "Do not bury finance CTAs under generic text walls."],
+    },
+    contact: {
+      pageType: "contact",
+      sectionOrder: ["contact-intro", "hours-directions", "team-help", "contact-actions"],
+      primaryCtas: ["Get Directions", "Contact Us"],
+      requiredKeywords: ["contact", "hours", "directions", "dealership"],
+      requiredElements: ["Hours", "Directions", "Primary contact CTA"],
+      compositionNotes: [
+        "Contact pages should emphasize hours, location, and dealership help first.",
+      ],
+      avoid: ["Do not make contact feel like a generic lead-gen landing page."],
+    },
+    about: {
+      pageType: "about",
+      sectionOrder: ["story-intro", "dealer-differentiators", "trust-block", "contact-cta"],
+      primaryCtas: ["Contact Us", "Check Availability"],
+      requiredKeywords: ["about", "dealership", "team", "service"],
+      requiredElements: ["Dealer story", "Trust/differentiator block", "CTA"],
+      compositionNotes: [
+        "About pages should still support dealership trust and action, not just history.",
+      ],
+      avoid: ["Do not turn Toyota about pages into agency-style storytelling spreads."],
+    },
+  },
+  verificationRules: [
+    "Generated HTML must expose Toyota red via root CSS token or explicit Toyota primary color.",
+    "Specials and service pages must include a visible dealership CTA above the fold.",
+    "Homepage/service/finance output must not drift into SaaS or luxury composition.",
+    "The rendered page should match the Toyota page schema's required keywords and section intent.",
+  ],
+};
+
+const brandBase = {
   honda: {
     name: "Honda",
     tier: "mainstream",
@@ -247,6 +536,24 @@ export const brands: Record<string, BrandConfig> = {
       improve: ["premium whitespace", "luxury composure", "clear but quiet conversion pathways"],
     },
   },
-};
+} satisfies Record<string, Omit<BrandConfig, "oemPack">>;
+
+export const brands: Record<string, BrandConfig> = Object.fromEntries(
+  Object.entries(brandBase).map(([key, config]) => [
+    key,
+    {
+      ...config,
+      oemPack: key === "toyota" ? toyotaOemPack : createDefaultOemPack(config),
+    },
+  ]),
+) as Record<string, BrandConfig>;
 
 export const brandKeys = Object.keys(brands);
+
+export function getBrandPageSchema(brand: BrandConfig | undefined, pageType?: string) {
+  if (!brand || !pageType) {
+    return undefined;
+  }
+
+  return brand.oemPack.pageSchemas[pageType as DiscoveryPageType];
+}

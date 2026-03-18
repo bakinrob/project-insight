@@ -10,7 +10,8 @@ import {
 import { toast } from "sonner";
 import { firecrawlApi } from "@/lib/api/firecrawl";
 import { dealerWorkflowApi } from "@/lib/api/dealer-workflow";
-import { brands } from "@/lib/brands";
+import { brands, getBrandPageSchema } from "@/lib/brands";
+import { mapStoredPagesToJobs, validateGeneratedPage } from "@/lib/generated-pages";
 import type {
   DealerRunListItem,
   DealerWorkspaceState,
@@ -83,24 +84,6 @@ function loadPersistedState(): DealerWorkspaceState {
   } catch {
     return initialState;
   }
-}
-
-function mapStoredPagesToJobs(
-  pages: Array<Record<string, unknown>>,
-): PageJob[] {
-  return pages.map((page) => ({
-    url: String(page.url || ""),
-    normalizedUrl: String(page.normalized_url || page.url || ""),
-    status:
-      page.status === "completed"
-        ? "done"
-        : (page.status as PageJob["status"]) || "pending",
-    scrapedMeta: page.scraped_meta as { title?: string; description?: string } | undefined,
-    pageType: page.page_type ? String(page.page_type) : undefined,
-    structuredData: (page.structured_data as Record<string, unknown>) || undefined,
-    generatedCode: page.generated_code ? String(page.generated_code) : undefined,
-    error: page.error ? String(page.error) : undefined,
-  }));
 }
 
 function mapStoredRunToDiscovery(
@@ -300,6 +283,18 @@ export function DealerRunProvider({ children }: { children: ReactNode }) {
       pageTypeHint: structuredPageType,
     });
 
+    const pageSchema = getBrandPageSchema(brand, structuredPageType);
+    const verification = validateGeneratedPage({
+      generatedCode,
+      pageType: structuredPageType,
+      brand,
+      pageSchema,
+    });
+
+    if (!verification.valid) {
+      throw new Error(`Verification failed: ${verification.errors.join(" ")}`);
+    }
+
     updateJob(pageKey, {
       status: "done",
       generatedCode,
@@ -315,6 +310,7 @@ export function DealerRunProvider({ children }: { children: ReactNode }) {
         completedAt: new Date().toISOString(),
         totalPages,
         totalDiscovered,
+        verification,
       },
     });
   }, [updateJob]);

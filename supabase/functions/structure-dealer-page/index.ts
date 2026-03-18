@@ -46,6 +46,9 @@ serve(async (req) => {
 
   try {
     const { scrapedContent, metadata, brand, pageTypeHint } = await req.json();
+    const pageType = pageTypeHint || "unknown";
+    const oemPack = brand?.oemPack || {};
+    const pageSchema = oemPack?.pageSchemas?.[pageType] || null;
 
     if (!scrapedContent) {
       return new Response(JSON.stringify({ error: "scrapedContent is required" }), {
@@ -74,7 +77,9 @@ serve(async (req) => {
             role: "user",
             content: `Brand: ${brand?.name || "Unknown"}
 Brand profile: ${JSON.stringify(brand?.profile || {}, null, 2)}
-Page type hint: ${pageTypeHint || "unknown"}
+OEM pack: ${JSON.stringify(oemPack, null, 2)}
+Page type hint: ${pageType}
+Preferred page schema: ${JSON.stringify(pageSchema, null, 2)}
 Source URL: ${metadata?.sourceUrl || ""}
 Original title: ${metadata?.title || ""}
 Original description: ${metadata?.description || ""}
