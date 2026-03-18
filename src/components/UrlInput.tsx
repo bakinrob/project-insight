@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -8,50 +9,107 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { brands, brandKeys } from "@/lib/brands";
-import { Zap } from "lucide-react";
+import type { InputMode } from "@/lib/dealer-workflow";
+import { Compass, Zap } from "lucide-react";
 
 interface UrlInputProps {
-  onSubmit: (urls: string[], brandKey: string) => void;
+  onSubmit: (payload: { mode: InputMode; urls?: string[]; seedUrl?: string; brandKey: string }) => void;
   isProcessing: boolean;
 }
 
 const UrlInput = ({ onSubmit, isProcessing }: UrlInputProps) => {
+  const [mode, setMode] = useState<InputMode>("manual_urls");
   const [urlText, setUrlText] = useState("");
+  const [seedUrl, setSeedUrl] = useState("");
   const [selectedBrand, setSelectedBrand] = useState("");
 
+  const urls = useMemo(
+    () =>
+      urlText
+        .split("\n")
+        .map((u) => u.trim())
+        .filter((u) => u.length > 0),
+    [urlText],
+  );
+
   const handleSubmit = () => {
-    const urls = urlText
-      .split("\n")
-      .map((u) => u.trim())
-      .filter((u) => u.length > 0);
-    if (urls.length === 0 || !selectedBrand) return;
-    onSubmit(urls, selectedBrand);
+    if (!selectedBrand) return;
+
+    if (mode === "manual_urls") {
+      if (urls.length === 0) return;
+      onSubmit({ mode, urls, brandKey: selectedBrand });
+      return;
+    }
+
+    if (!seedUrl.trim()) return;
+    onSubmit({ mode, seedUrl: seedUrl.trim(), brandKey: selectedBrand });
   };
 
-  const urlCount = urlText
-    .split("\n")
-    .filter((u) => u.trim().length > 0).length;
+  const submitDisabled =
+    isProcessing ||
+    !selectedBrand ||
+    (mode === "manual_urls" ? urls.length === 0 : seedUrl.trim().length === 0);
 
   return (
     <div className="space-y-5">
-      <div>
-        <label className="text-sm font-medium text-muted-foreground mb-2 block">
-          Paste dealership URLs (one per line)
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-muted-foreground block">
+          Input Mode
         </label>
-        <Textarea
-          value={urlText}
-          onChange={(e) => setUrlText(e.target.value)}
-          placeholder={"https://dealer-website.com/about\nhttps://dealer-website.com/service\nhttps://dealer-website.com/inventory"}
-          className="min-h-[160px] bg-background border-border font-mono text-sm resize-none"
-          disabled={isProcessing}
-        />
-        {urlCount > 0 && (
-          <p className="text-xs text-muted-foreground mt-1.5">
-            {urlCount} URL{urlCount !== 1 ? "s" : ""} detected
-          </p>
-        )}
+        <Tabs
+          value={mode}
+          onValueChange={(value) => setMode(value as InputMode)}
+          className="w-full"
+        >
+          <TabsList className="grid grid-cols-2 w-full">
+            <TabsTrigger value="manual_urls">Manual URLs</TabsTrigger>
+            <TabsTrigger value="seed_discovery">Seed Discovery</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Manual mode is the safest demo path. Seed discovery starts from one homepage URL,
+          finds likely migration pages, and pauses for review before scraping.
+        </p>
       </div>
+
+      {mode === "manual_urls" ? (
+        <div>
+          <label className="text-sm font-medium text-muted-foreground mb-2 block">
+            Paste dealership URLs (one per line)
+          </label>
+          <Textarea
+            value={urlText}
+            onChange={(e) => setUrlText(e.target.value)}
+            placeholder={"https://dealer-website.com/about\nhttps://dealer-website.com/service\nhttps://dealer-website.com/inventory"}
+            className="min-h-[160px] bg-background border-border font-mono text-sm resize-none"
+            disabled={isProcessing}
+          />
+          {urls.length > 0 && (
+            <p className="text-xs text-muted-foreground mt-1.5">
+              {urls.length} URL{urls.length !== 1 ? "s" : ""} detected
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted-foreground block">
+            Dealership Homepage URL
+          </label>
+          <Input
+            value={seedUrl}
+            onChange={(e) => setSeedUrl(e.target.value)}
+            placeholder="https://www.examplemotors.com"
+            className="bg-background border-border font-mono text-sm"
+            disabled={isProcessing}
+          />
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            DealerForge will crawl the same domain, infer page types, exclude junk pages,
+            and generate a reviewable sitemap before any AI generation starts.
+          </p>
+        </div>
+      )}
 
       <div>
         <label className="text-sm font-medium text-muted-foreground mb-2 block">
@@ -82,12 +140,18 @@ const UrlInput = ({ onSubmit, isProcessing }: UrlInputProps) => {
 
       <Button
         onClick={handleSubmit}
-        disabled={urlCount === 0 || !selectedBrand || isProcessing}
+        disabled={submitDisabled}
         className="w-full h-12 text-base font-semibold"
         size="lg"
       >
-        <Zap className="w-5 h-5" />
-        {isProcessing ? "Processing..." : `Generate ${urlCount} Page${urlCount !== 1 ? "s" : ""}`}
+        {mode === "manual_urls" ? <Zap className="w-5 h-5" /> : <Compass className="w-5 h-5" />}
+        {mode === "manual_urls"
+          ? isProcessing
+            ? "Processing..."
+            : `Generate ${urls.length} Page${urls.length !== 1 ? "s" : ""}`
+          : isProcessing
+            ? "Discovering..."
+            : "Discover Migration Pages"}
       </Button>
     </div>
   );

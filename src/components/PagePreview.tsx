@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Eye, Code, Copy, Check } from "lucide-react";
+import { Eye, Code, Copy, Check, Database } from "lucide-react";
 import type { PageJob } from "./ScrapeProgress";
 import { toast } from "sonner";
 
@@ -13,7 +13,10 @@ const PagePreview = ({ jobs }: PagePreviewProps) => {
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [copied, setCopied] = useState(false);
 
-  const completedJobs = jobs.filter((j) => j.status === "done" && j.generatedCode);
+  const completedJobs = useMemo(
+    () => jobs.filter((j) => j.status === "done" && j.generatedCode),
+    [jobs],
+  );
   if (completedJobs.length === 0) return null;
 
   const current = completedJobs[selectedIdx] || completedJobs[0];
@@ -62,6 +65,9 @@ const PagePreview = ({ jobs }: PagePreviewProps) => {
           <TabsTrigger value="code" className="gap-1.5">
             <Code className="w-3.5 h-3.5" /> Code
           </TabsTrigger>
+          <TabsTrigger value="data" className="gap-1.5">
+            <Database className="w-3.5 h-3.5" /> Data
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="preview" className="mt-3">
@@ -88,6 +94,21 @@ const PagePreview = ({ jobs }: PagePreviewProps) => {
         <TabsContent value="code" className="mt-3">
           <pre className="rounded-lg bg-card border border-border p-4 overflow-auto max-h-[500px] text-xs font-mono text-foreground leading-relaxed">
             {current.generatedCode}
+          </pre>
+        </TabsContent>
+
+        <TabsContent value="data" className="mt-3">
+          <pre className="rounded-lg bg-card border border-border p-4 overflow-auto max-h-[500px] text-xs font-mono text-foreground leading-relaxed whitespace-pre-wrap break-words">
+            {JSON.stringify(
+              {
+                url: current.url,
+                pageType: current.pageType,
+                seo: current.scrapedMeta,
+                structuredData: current.structuredData,
+              },
+              null,
+              2,
+            )}
           </pre>
         </TabsContent>
       </Tabs>
