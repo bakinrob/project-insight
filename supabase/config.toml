@@ -5,3 +5,12 @@ verify_jwt = false
 
 [functions.generate-dealer-page]
 verify_jwt = false
+
+[functions.discover-dealer-site]
+verify_jwt = false
+
+[functions.track-dealer-run]
+verify_jwt = false
+
+[functions.structure-dealer-page]
+verify_jwt = false
