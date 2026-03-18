@@ -120,7 +120,7 @@ const Index = () => {
               description: metadata.description,
               sourceUrl: page.url,
             },
-            brand: brand as Record<string, unknown>,
+            brand: brand as unknown as Record<string, unknown>,
             pageTypeHint: page.pageType,
           });
 
