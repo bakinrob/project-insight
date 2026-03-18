@@ -124,28 +124,25 @@ export function extractHeading(markdown: string): string | undefined {
 export function extractLinksFromMarkdown(markdown: string, rootUrl: string): DiscoveryPageCandidate[] {
   const matches = [...markdown.matchAll(/\[([^\]]+)\]\(([^)]+)\)/g)];
 
-  return matches
-    .map((match) => {
-      const anchorText = match[1]?.trim();
-      const href = match[2]?.trim();
-      if (!href) {
-        return null;
-      }
-
-      try {
-        const resolved = new URL(href, rootUrl).toString();
-        return {
-          url: resolved,
-          normalizedUrl: normalizeUrl(resolved),
-          depth: 1,
-          source: "markdown",
-          anchorText,
-        };
-      } catch {
-        return null;
-      }
-    })
-    .filter((candidate): candidate is DiscoveryPageCandidate => Boolean(candidate));
+  const results: DiscoveryPageCandidate[] = [];
+  for (const match of matches) {
+    const anchorText = match[1]?.trim();
+    const href = match[2]?.trim();
+    if (!href) continue;
+    try {
+      const resolved = new URL(href, rootUrl).toString();
+      results.push({
+        url: resolved,
+        normalizedUrl: normalizeUrl(resolved),
+        depth: 1,
+        source: "markdown",
+        anchorText,
+      });
+    } catch {
+      // skip invalid URLs
+    }
+  }
+  return results;
 }
 
 export function parseSitemapXml(xml: string): string[] {

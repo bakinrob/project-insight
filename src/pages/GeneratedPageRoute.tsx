@@ -29,7 +29,7 @@ export default function GeneratedPageRoute() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const selectedView: ViewMode = isViewMode(searchParams.get("view")) ? searchParams.get("view") : "preview";
+  const selectedView: ViewMode = isViewMode(searchParams.get("view")) ? (searchParams.get("view") as ViewMode) : "preview";
   const decodedPageKey = useMemo(() => {
     if (!pageKey) return null;
     try {
