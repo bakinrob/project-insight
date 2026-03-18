@@ -1,1 +1,7 @@
 project_id = "jxacqzvywsowqzmbmxjt"
+
+[functions.firecrawl-scrape]
+verify_jwt = false
+
+[functions.generate-dealer-page]
+verify_jwt = false
